@@ -23,7 +23,7 @@ def test_register_duplicate_username(client, test_user):
     response = client.post("/auth/register", json={
         "username": "testuser",  # Уже существует
         "email": "another@example.com",
-        "password": "pass123"
+        "password": "pass1234"
     })
     assert response.status_code == status.HTTP_400_BAD_REQUEST
 
