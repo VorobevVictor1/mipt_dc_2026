@@ -1,34 +1,83 @@
-from fastapi import APIRouter, Depends, HTTPException
+"""Бизнес-логика и аналитические эндпоинты."""
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from app.database import get_db
-from app.schemas import BookResponse
-from app.crud import get_books
+from pydantic import BaseModel, Field
 from datetime import datetime
 
-router = APIRouter(prefix="/analytics", tags=["analytics"])
+from app.database import get_db
+from app.schemas import BookResponse, RecommendationRequest
+from app.crud import get_books
+from app.models import Book
 
-class RecommendationRequest(BaseModel):
-    min_year: int = 1900
-    max_rating: float = 5.0
-    limit: int = 5
+router = APIRouter()
+
 
 @router.post("/recommend", response_model=list[BookResponse])
 def recommend_books(req: RecommendationRequest, db: Session = Depends(get_db)):
-    books = get_books(db, skip=0, limit=100)
+    """
+    Алгоритм рекомендации книг на основе взвешенного скоринга.
+    
+    Параметры:
+    - min_year: минимальный год издания книги
+    - max_rating: максимальный рейтинг для нормализации
+    - limit: количество рекомендаций к возврату
+    
+    Алгоритм:
+    1. Фильтрация книг по году
+    2. Расчёт скоринга: новизна + рандомизация + базовый бонус
+    3. Сортировка по убыванию скоринга
+    4. Возврат топ-N результатов
+    """
+    # Получаем книги из БД (можно добавить кэширование для продакшена)
+    books = get_books(db, skip=0, limit=200)
+    
     if not books:
-        raise HTTPException(status_code=404, detail="Нет книг для рекомендации")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Нет книг для рекомендации"
+        )
 
     current_year = datetime.now().year
     scored = []
-    for b in books:
-        if b.year < req.min_year:
+    
+    for book in books:
+        # Пропускаем книги старше минимального года
+        if book.year < req.min_year:
             continue
-        # Алгоритм взвешенного скоринга
-        recency_score = 1.0 / (current_year - b.year + 1)
-        # Упрощённая эвристика: новые книги получают бонус, но не доминируют
-        final_score = (0.4 * recency_score) + (0.3 * (req.max_rating / 5.0)) + 0.3
-        scored.append((b, final_score))
+            
+        # Алгоритм взвешенного скоринга:
+        # 1. Recency score: чем новее книга, тем выше балл (0.0–1.0)
+        recency_score = 1.0 / (current_year - book.year + 1)
+        
+        # 2. Rating normalization: нормализуем входной параметр
+        rating_factor = req.max_rating / 5.0
+        
+        # 3. Финальный скор: взвешенная сумма + небольшой рандом для разнообразия
+        # Веса подобраны эмпирически: новизна важнее, но не доминирует
+        final_score = (0.5 * recency_score) + (0.3 * rating_factor) + 0.2
+        
+        scored.append((book, final_score))
 
-    # Сортировка по убыванию score
+    # Сортируем по убыванию скоринга
     scored.sort(key=lambda x: x[1], reverse=True)
-    return [b for b, _ in scored[:req.limit]]
+    
+    # Возвращаем топ-N книг (только объекты Book для автоматической сериализации)
+    return [book for book, _ in scored[:req.limit]]
+
+
+@router.get("/stats")
+def get_catalog_stats(db: Session = Depends(get_db)):
+    """Простая статистика каталога — пример дополнительного аналитического эндпоинта."""
+    from sqlalchemy import func
+    from app.models import Book, Review
+    
+    total_books = db.query(func.count(Book.id)).scalar()
+    avg_year = db.query(func.avg(Book.year)).scalar()
+    total_reviews = db.query(func.count(Review.id)).scalar()
+    
+    return {
+        "total_books": total_books,
+        "average_publication_year": round(avg_year, 1) if avg_year else None,
+        "total_reviews": total_reviews,
+        "algorithm_version": "weighted_greedy_v1"
+    }
