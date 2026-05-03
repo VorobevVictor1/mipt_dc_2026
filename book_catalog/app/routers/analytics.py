@@ -24,7 +24,7 @@ def recommend_books(req: RecommendationRequest, db: Session = Depends(get_db)):
 
     Алгоритм:
     1. Фильтрация книг по году
-    2. Расчёт скоринга: новизна + рандомизация + базовый бонус
+    2. Расчёт скоринга: новизна + рейтинг
     3. Сортировка по убыванию скоринга
     4. Возврат топ-N результатов
     """
@@ -51,9 +51,9 @@ def recommend_books(req: RecommendationRequest, db: Session = Depends(get_db)):
         # 2. Rating normalization: нормализуем входной параметр
         rating_factor = req.max_rating / 5.0
 
-        # 3. Финальный скор: взвешенная сумма + небольшой рандом для разнообразия
+        # 3. Финальный скор: взвешенная сумма
         # Веса подобраны эмпирически: новизна важнее, но не доминирует
-        final_score = (0.5 * recency_score) + (0.3 * rating_factor) + 0.2
+        final_score = (0.6 * recency_score) + (0.4 * rating_factor)
 
         scored.append((book, final_score))
 
