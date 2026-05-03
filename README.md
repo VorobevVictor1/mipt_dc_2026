@@ -16,7 +16,6 @@
 ```bash
 # Клонировать репозиторий и перейти в папку проекта
 git clone <repo-url>
-cd book_catalog
 
 # Создать виртуальное окружение через uv
 uv venv
@@ -25,6 +24,7 @@ uv venv
 uv pip install -r requirements.txt
 
 # Запустить сервер разработки
+cd book_catalog
 uv run uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
