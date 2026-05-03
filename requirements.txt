@@ -11,5 +11,5 @@ pytest-asyncio>=0.24.0
 httpx>=0.27.0
 email-validator>=2.0.0
 pylint>=3.0.0
-ruff>=0.4.0        # быстрый линтер/форматтер (замена flake8 + isort + часть pylint)
-black>=24.0.0      # форматирование кода (стиль)
+ruff>=0.4.0
+black>=24.0.0
