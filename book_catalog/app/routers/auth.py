@@ -1,4 +1,5 @@
 """Эндпоинты аутентификации: регистрация, логин, профиль."""
+
 from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -17,24 +18,30 @@ from app.auth import (
 router = APIRouter(tags=["Авторизация"])
 
 
-@router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED
+)
 def register(user_create: UserCreate, db: Session = Depends(get_db)):
     """Регистрация нового пользователя."""
     # Проверка уникальности
-    existing = db.query(User).filter(
-        (User.username == user_create.username) | (User.email == user_create.email)
-    ).first()
+    existing = (
+        db.query(User)
+        .filter(
+            (User.username == user_create.username) | (User.email == user_create.email)
+        )
+        .first()
+    )
     if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Пользователь с таким username или email уже существует"
+            detail="Пользователь с таким username или email уже существует",
         )
-    
+
     # Создание
     db_user = User(
         username=user_create.username,
         email=user_create.email,
-        hashed_password=get_password_hash(user_create.password)
+        hashed_password=get_password_hash(user_create.password),
     )
     db.add(db_user)
     db.commit()
@@ -44,12 +51,11 @@ def register(user_create: UserCreate, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
 ):
     """
     Вход в систему.
-    
+
     Отправляйте как application/x-www-form-urlencoded:
     username=...&password=...
     Или через Swagger UI: кнопка "Authorize" → введите логин/пароль.
@@ -61,10 +67,10 @@ def login(
             detail="Неверное имя пользователя или пароль",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    
+
     access_token = create_access_token(
         data={"sub": user.username},
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
     return {"access_token": access_token, "token_type": "bearer"}
 

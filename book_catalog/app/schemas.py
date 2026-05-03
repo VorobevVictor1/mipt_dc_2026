@@ -1,25 +1,30 @@
 """Pydantic схемы для валидации запросов и ответов API."""
+
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 from typing import Optional
 
-
 # ==================== AUTH ====================
 
+
 class UserCreate(BaseModel):
-    username: str = Field(..., min_length=3, max_length=50, pattern=r'^[\w.@+-]+$')
+    username: str = Field(..., min_length=3, max_length=50, pattern=r"^[\w.@+-]+$")
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
+
 
 class UserLogin(BaseModel):
     username: str
     password: str
 
+
 class Token(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+
 class TokenData(BaseModel):
     username: str | None = None
+
 
 class UserResponse(BaseModel):
     id: int
@@ -30,8 +35,10 @@ class UserResponse(BaseModel):
 
 # ==================== AUTHORS ====================
 
+
 class AuthorCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
+
 
 class AuthorResponse(BaseModel):
     id: int
@@ -41,10 +48,12 @@ class AuthorResponse(BaseModel):
 
 # ==================== BOOKS ====================
 
+
 class BookCreate(BaseModel):
     title: str = Field(..., min_length=1, max_length=200)
     year: int = Field(..., ge=1000, le=2026)
     author_id: int
+
 
 class BookResponse(BaseModel):
     id: int
@@ -56,10 +65,12 @@ class BookResponse(BaseModel):
 
 # ==================== REVIEWS ====================
 
+
 class ReviewCreate(BaseModel):
     book_id: int
     rating: float = Field(..., ge=1.0, le=5.0)
     comment: Optional[str] = Field(None, max_length=1000)
+
 
 class ReviewResponse(BaseModel):
     id: int
@@ -71,6 +82,7 @@ class ReviewResponse(BaseModel):
 
 
 # ==================== ANALYTICS ====================
+
 
 class RecommendationRequest(BaseModel):
     min_year: int = Field(default=1900, ge=1000, le=2026)
